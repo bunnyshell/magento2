@@ -1,37 +1,9 @@
-exec_once:
- files:
-  /etc/apache2/sites-enabled/magento2.conf:
-    name: magento2.conf
-    path: /etc/apache2/sites-enabled/
-    mode: "0644"
-    owner: root
-    group: root
-    content: |
-      <VirtualHost *:80>
-        DocumentRoot /var/www/html/magento2
-        <Directory /var/www/html/magento2>
-          AllowOverride All
-          Order Allow,Deny
-          Allow from All
-        </Directory>
-
-        CustomLog /var/log/apache2/access.log combined
-        ErrorLog /var/log/apache2/error.log
-
-      </VirtualHost>
- execs:
-  Remove default apache config file:
-   name: Remove default apache config file
-   command: |
-     rm -f /etc/apache2/sites-enabled/000-default.conf
-
 pre_app_deploy:
  execs:
   Configure Magento2:
    name: Configure Magento2
    command: |
      #!/usr/bin/env bash
-    
      export COMPOSER_HOME=/usr/local/bin/.composer
      /usr/local/bin/composer install
 

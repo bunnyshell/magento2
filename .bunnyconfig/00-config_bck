@@ -1,0 +1,70 @@
+exec_once:
+ files:
+  /etc/apache2/sites-enabled/magento2.conf:
+    name: magento2.conf
+    path: /etc/apache2/sites-enabled/
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      <VirtualHost *:80>
+        DocumentRoot /var/www/html/magento2
+        <Directory /var/www/html/magento2>
+          AllowOverride All
+          Order Allow,Deny
+          Allow from All
+        </Directory>
+
+        CustomLog /var/log/apache2/access.log combined
+        ErrorLog /var/log/apache2/error.log
+
+      </VirtualHost>
+ execs:
+  Remove default apache config file:
+   name: Remove default apache config file
+   command: |
+     rm -f /etc/apache2/sites-enabled/000-default.conf
+
+pre_app_deploy:
+ execs:
+  Configure Magento2:
+   name: Configure Magento2
+   command: |
+     #!/usr/bin/env bash
+     . /opt/bunnyshell/package_secrets.sh
+    
+     config_file="wp-config.php"
+     cp wp-config-sample.php ${config_file}
+
+      export COMPOSER_HOME=/usr/local/bin/.composer
+     /usr/local/bin/composer install
+
+     php -f bin/magento setup:install –base-url=http://m2.loc/2.07/github/ \
+        --backend-frontname=admin               \
+        --db-host=localhost                     \
+        --db-name=m2git                         \
+        --db-user=root                          \
+        --db-password=inchoo                    \
+        --admin-firstname=Magento               \
+        --admin-lastname=User                   \
+        --admin-email=ivan.veres@inchoo.net     \
+        --admin-user=admin                      \
+        --admin-password=magento123             \
+        --language=en_US                        \
+        --currency=USD                          \
+        --timezone=America/Chicago              \
+        –use-rewrites=1
+
+
+     sed -i -- "s/database_name_here/${MYSQL__DATABASE_NAME}/g" ${config_file}
+     sed -i -- "s/username_here/${MYSQL__DATABASE_USER}/g" ${config_file}
+     sed -i -- "s/password_here/${MYSQL__USER_PASSWORD}/g" ${config_file}
+
+post_app_deploy:
+ execs:
+  Restart apache:
+   name: Restart apache
+   command: |
+     #!/usr/bin/env bash
+     chown -RL www-data:www-data /var/www/html/magento2
+     service apache2 restart
